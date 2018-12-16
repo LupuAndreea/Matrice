@@ -2,11 +2,13 @@
 #include <LiquidCrystal.h>
 
 #define JoyPinX A0
-#define JoyPinY A1
-#define JoyPinZ 2 
+#define JoyPinY A1 
+#define INDEX_TIME 10
 
 LedControl lc = LedControl(12, 11, 10, 1); //DIN, CLK, LOAD, No. DRIVER
 LiquidCrystal lcd(3,4,5,6,7,8);
+
+int Interval1 = 300; 
 
 int PositionX = 0;
 int PrevPosX = 0;
@@ -15,10 +17,10 @@ int ValX = 0;
 int LetTheGameBegin = 0;
 int Beginning = 1 ;
 
-bool ballDirectionX = true;
-bool ballDirectionY = false;
-int ballX = 2;
-int ballY = 4;
+bool BallDirectionX = true;
+bool BallDirectionY = false;
+int BallX = random(3,7);
+int BallY = random(3,7);
 
 unsigned long LastUpdate = 0;
 unsigned long LastUpdateBall = 0;
@@ -27,6 +29,8 @@ int Time = 0;
 int Speed = 0;
 int Lives = 5;
 int NrMoves = 0;
+int PrevNrMoves = 0;
+
 
 const byte Start[][8] = {
 {
@@ -335,26 +339,32 @@ const int IMAGES_LEN2 = sizeof(End)/8;
 
 void GameSetups(){
 
-     PositionX = 0;    
-     PrevPosX = 0;
-     ValX = 0;
-    
-     ballDirectionX = true; 
-     ballDirectionY = false;
+     if(Lives ==0){ 
+      
+           PositionX = 0;    
+           PrevPosX = 0;
+           ValX = 0;
+          
+           BallDirectionX = true; 
+           BallDirectionY = false;
+      
+           LastUpdate = 0;
+           LastUpdateBall = 0;
+      
+           LetTheGameBegin = 0;
+           Beginning = 1 ;
+      
+           Time = 0;
+           Speed = 0;
+           Lives = 3;
+           NrMoves = 0;
+           PrevNrMoves = 0;
+
+           Interval1 = 300;
+     }
      
-     ballX = 2; 
-     ballY = 4;
-
-     LastUpdate = 0;
-     LastUpdateBall = 0;
-
-     LetTheGameBegin = 0;
-     Beginning = 1 ;
-
-     Time = 0;
-     Speed = 0;
-     Lives = 5;
-     NrMoves = 0;
+       BallX = random(3,7); 
+       BallY = random(3,7);
 }
 
 void PlateMovement(){
@@ -369,10 +379,12 @@ void PlateMovement(){
             if( ValX < 340 ){
                     PrevPosX = PositionX;
                     PositionX--;
+                    NrMoves++;
              }
             if( ValX > 680 ){
                     PrevPosX = PositionX;
                     PositionX++;
+                    NrMoves++;
             }
 
             if( PositionX < 0) PositionX = 0;
@@ -390,40 +402,47 @@ void PlateMovement(){
        }
        
 }
- 
+
 void BallMove(){
 
-  int Interval1 = 200;
+  
+  if( NrMoves > PrevNrMoves + 7 ) {
+    PrevNrMoves = NrMoves;
+    Interval1 = Interval1 - INDEX_TIME;
+    Speed++;
+  }
   if( (millis() - LastUpdateBall) >= Interval1 ){ 
     
            LastUpdateBall = millis();
 
-           lc.setLed(0,ballX,ballY,0);
+           lc.setLed(0,BallX,BallY,0);
            
-          if (ballDirectionX)
-            ballX--;
+          if (BallDirectionX)
+            BallX--;
           else
-            ballX++;
+            BallX++;
         
-          if (ballDirectionY)
-            ballY--;
+          if (BallDirectionY)
+            BallY--;
           else
-            ballY++;
+            BallY++;
              
-          if ( ballY == 1 ){
-            if ( ballX < PositionX || ballY > PositionX + 3 )
+          if ( BallY == 1 ){
+            if ( BallX < PositionX || BallX > PositionX + 2 ){
+              Lives--;
               GameOver();
+            }
             else
-              ballDirectionY = !ballDirectionY;
+              BallDirectionY = !BallDirectionY;
           }
           
-          if( ballX == 0 || ballX == 7)
-            ballDirectionX = !ballDirectionX;
+          if( BallX == 0 || BallX == 7)
+            BallDirectionX = !BallDirectionX;
             
-          if( ballY == 7)
-            ballDirectionY = !ballDirectionY;
+          if( BallY == 7)
+            BallDirectionY = !BallDirectionY;
 
-           lc.setLed(0,ballX,ballY,1);
+           lc.setLed(0,BallX,BallY,1);
         }
 }
 
@@ -442,15 +461,13 @@ void StartGame(){
           displayImage(Start[i]);
           delay(100);    
     }
-   // lcd.setCursor(2,1);
-   // lcd.print("Time %d Speed %d Lives %d");
+    lcd.setCursor(1,1);
+    lcd.println("Time Speed Lives ");
 }
 
 void ContinueGame(){
-  
     PlateMovement();
     BallMove();
-    
 }
 
 void GameOver(){
@@ -458,7 +475,7 @@ void GameOver(){
     LetTheGameBegin = 0;
      for ( int i = 0; i < IMAGES_LEN2; i++){
           displayImage(End [i]);
-          delay(100);    
+          delay(200);    
     }
     Lives--;
 }
